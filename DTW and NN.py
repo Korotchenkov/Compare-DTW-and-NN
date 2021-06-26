@@ -14,7 +14,6 @@ from sklearn.model_selection import train_test_split
 import tensorflow as tf
 
 dictionary=['Книги', 'Фильмы', 'Музыка', 'Фотографии', 'Документы', 'Проекты', 'Дистрибутивы', 'Загрузки', 'Игры']
-# dictionary=['К']
 
 path="C:\\Users\\Maksim Korotchenkov\\PycharmProjects\\MIAODI\\venv\\files\\sample\\"#путь к записям
 files=os.listdir(path)#массив названий файлов, лежащих в папке по пути path
@@ -61,9 +60,6 @@ for w_ind in range(len(dictionary)):
             # wnd = sc.parzen(frameWidth)
             # wnd = sc.bartlett(frameWidth) #окно Бартлетта
 
-            # print(len(y))
-            # print(len(y_int))
-
 # записать в массив Mfccs мел частотные кепстральные коэффициенты
             Mfccs=ftr.mfcc(y=y,sr=sr,n_mfcc=n_mfcc,
                            hop_length=df,
@@ -71,18 +67,10 @@ for w_ind in range(len(dictionary)):
                            win_length=frameWidth, #указали ширину окна
                            dct_type=dct_type
                            )
-            # print(Mfccs)
-            # fig1=plt.figure()
-            # plt.plot(Mfccs)
 
 # #МЧКК в другом виде
             Mfccs = Mfccs.ravel(order='F')
-            # Mfccs.reshape((1,(frameCount2 +1)* n_mfcc))
 
-            # print(Mfccs)
-            # fig2=plt.figure()
-            # plt.plot(Mfccs)
-#
 # #расчет МЧКК не разбивая на кадры (для всей реализации в в целом) (используя метод core)
 #
             S = core.power_to_db(ftr.melspectrogram(y=y, sr=sr
@@ -92,10 +80,6 @@ for w_ind in range(len(dictionary)):
                                                     )) #расчет мощности
             M = sc.fftpack.dct(S, axis=0, type=dct_type, norm=norm)[:n_mfcc] #МЧКК и дискретно косинусное преобразование
 
-            # print(M)
-            # fig3=plt.figure()
-            # plt.plot(M)
-            # plt.show()
 #запишем все реализации в единый массив (последовательно, так как они обрабатываются)
             all_data.append({'n': w_ind, #в поле n будем закладывать индекс слова
                              'filename': filename, #в поле filename будем закладывать название команды
@@ -107,10 +91,6 @@ for w_ind in range(len(dictionary)):
             w_count += 1 #количество реализаций (одного слова-команды)
             # break
     word_count.append({'fcount': w_count, 'findexes': f_ind_array}) # данный массив содержит в первом поле количество повторений, а во втором- уникальные индексы порядка слов
-
-# print(all_data[0]['mfccs_fr'])
-# print(word_count[2])
-# sys.exit(1)
 
 #создание обучающего и тестового массивов для алгоритма DTW
 train_data = []
@@ -133,16 +113,6 @@ for w_ind in range(len(dictionary)):
         f_ind = rnd.choice(findexes)
         test_data.append(all_data[f_ind])
         findexes.remove(f_ind) #В итоге в тестовой выборке будет по 10*0,3 рандомных реализаций слова
-
-# print(train_data)
-# print(test_data)
-
-# print('tran') #вывод названий файлов, которые попали в обучающую и тестовую часть
-# for k in range(len(train_data)):
-#     print(train_data[k]['fname'])
-# print('test')
-# for k in range(len(test_data)):
-#     print(test_data[k]['fname'])
 
 #алгоритм DTW (Поиск расстояний между последовательностями МЧКК, которые попали в тестовый массив и последовательностями МЧКК, которые попали в обучающий массив)
 t1 = timeit.default_timer()
@@ -189,9 +159,7 @@ print("Точность метода DTW", 1-errors / len(res))
 
 sys.exit(1)
 
-# НАЧАЛО МНОГОСЛОЙНОГО ПЕРСЕПТРОНА (подготовка данных для работы с ним)
-# работая с DTW мы работали с массивом alldata, для персептрона он избыточен,
-# создадим массив data чтобы хранить в нем только МЧКК по кадрам каждой реализации
+# NN (подготовка данных для работы с ней)
 mfcc_count = 0
 for f_ind in range(len(all_data)):
     if len(all_data[f_ind]['mfccs_fr']) > mfcc_count:
@@ -204,67 +172,27 @@ for i in range(len(data)):
     for j in range(len(all_data[i]['mfccs_fr'])):
         data[i,j] = all_data[i]['mfccs_fr'][j]
 
-# print(len(data[40]))
-# print(len(all_data[90]['mfccs_fr']))
-# print(labels)
-# print (labels)
-
 #архитектура нейронной сети-на выходе столько нейронов, сколько классов (слов) неообходимо распозновать из словаря,
 # такая архитектура решает задачу классификации лучше,чем с одним нейроном на выходе
 lb = LabelBinarizer() # некоторое преобразование labels (см 2:17) к виду меток класса,где каждая метка представляет
 # собой вектор состоящий из ноликов и единичек,стоящих на той позиции, номер класса которого кодирует вектор
 labels = lb.fit_transform(labels)
 
-# print (labels)
-
 (trainX, testX, trainY, testY) = train_test_split(data, labels, test_size=0.25, random_state=42) #разбиение двух массивов на обучающую и тестовую части
 
-#массив data разобьется на trainX testX как 3/4 и 1/4 и аналогично массив labels на trainY, testY
-
 count_neurons_in_input_dence=len(trainX[0])#количество нейронов во входном слое
-print(trainX)
-print(testX)
-print(len(data))
-print(len(trainX))
-print(len(trainX[0]))
-
-print(len(testX))
-print(len(testX[0]))
 
 t5 = timeit.default_timer()
 model = tf.keras.Sequential() #инициализируем модель персепрона
 
 neuron_in_layer=[frame_shift,optimizer,activation,epochs,n_mfcc,count_neurons_in_input_dence, 800,0.8]
 
-
 model.add(tf.keras.layers.Dense(neuron_in_layer[6], activation = activation, input_shape=(len(trainX[0]) #-количество нейронов во входном слое
                                                                           , ))) #добавляем в модель слои-входной
-# слой имеет столько нейронов, сколько МЧКК во входном массиве
-# # model.add(tf.keras.layers.Dense(150, activation = "sigmoid"))
-# model.add(tf.keras.layers.Dropout(0.3, noise_shape=None, seed=None))
-# # Input - Layer
-# # model.add(tf.keras.layers.Dense(300, activation = "sigmoid", input_shape=(len(trainX[0]), )))
-# # model.add(tf.keras.layers.Dense(60, activation = "sigmoid", input_shape=(len(trainX[0]), )))
-# model.add(tf.keras.layers.Dense(neuron_in_layer[4], activation = "sigmoid"))
-# model.add(tf.keras.layers.Dense(100, activation = "sigmoid"))
-model.add(tf.keras.layers.Dropout(neuron_in_layer[7], noise_shape=None, seed=None))
-# model.add(tf.keras.layers.Dense(neuron_in_layer[7], activation = activation))
-# model.add(tf.keras.layers.Dense(neuron_in_layer[8], activation = activation))
-# model.add(tf.keras.layers.Dropout(neuron_in_layer[7], noise_shape=None, seed=None))
-# model.add(tf.keras.layers.Dense(neuron_in_layer[7], activation = activation))
-# model.add(tf.keras.layers.Dropout(neuron_in_layer[7], noise_shape=None, seed=None))
-# model.add(tf.keras.layers.Dense(neuron_in_layer[8], activation = activation))
-# model.add(tf.keras.layers.Dropout(neuron_in_layer[9], noise_shape=None, seed=None))
-# model.add(tf.keras.layers.Dense(neuron_in_layer[9], activation = activation))
-# # model.add(tf.keras.layers.Dense(len(dictionary), activation = "relu", input_shape=(len(trainX[0]), )))
-# # Hidden - Layers
-# model.add(tf.keras.layers.Dropout(0.1, noise_shape=None, seed=None))
-# # model.add(tf.keras.layers.Dense(75, activation = "sigmoid"))
-# # model.add(tf.keras.layers.Dropout(0.2, noise_shape=None, seed=None))
-# # model.add(tf.keras.layers.Dense(30, activation = "sigmoid"))
-# # Output- Layer
-model.add(tf.keras.layers.Dense(len(dictionary), activation = 'sigmoid')) #метод Dense создает 1 полносвязный слой персептрона
 
+# слой имеет столько нейронов, сколько МЧКК во входном массиве
+model.add(tf.keras.layers.Dropout(neuron_in_layer[7], noise_shape=None, seed=None))
+model.add(tf.keras.layers.Dense(len(dictionary), activation = 'sigmoid')) #метод Dense создает 1 полносвязный слой персептрона
 model.summary()
 
 # compiling the model
@@ -299,15 +227,12 @@ y_pred = np.argmax(model.predict(testX), axis=1) # получение масси
 t4 = timeit.default_timer()
 y_true = testY
 
-print('Метки многослойного персептрона', y_pred)
-
 labelsY = lb.inverse_transform(testY, 0.5) # обратное преобразование векторов нулей и единичек в массив номеров позиций
 labelsY = np.array(labelsY, dtype='int16') # привод к целочисленному виду
 print('Метки расставленные экспертом',labelsY)
 
 test_acc = sum(y_pred == labelsY) / len(y_true)
 print(f'Test set accuracy: {test_acc:.0%}')
-# print('Время обработки с помощью алгоритма DTW', t2-t1)
 print('Время на классификацию тестового набора многослойным персептроном', t4-t3)
 print('Время на инциализацию модели и обучение персептрона', t6-t5)
 test_accur=int(test_acc)
@@ -321,6 +246,3 @@ for i in range(len(neuron_in_layer)):
 pathNW=pathNW+'_'+str(round(test_acc*100))+'%'+'.hdf5'
 # print(pathNW)
 model.save(pathNW)
-
-# model.summary()
-# model.evaluate(testX, testY)
